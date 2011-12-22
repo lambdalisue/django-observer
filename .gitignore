@@ -6,3 +6,5 @@
 # miniblog
 *.db
 .sass-cache/
+
+.ropeproject
