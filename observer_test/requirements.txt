@@ -1,0 +1,3 @@
+PyYAML
+django>=1.2
+django-author

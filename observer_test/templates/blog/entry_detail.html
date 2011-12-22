@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% load url from future %}
+
+{% block contents %}
+<article class="entry" id="entry">
+    <h1>{{ object.title }}</h1>
+    {% if user.is_authenticated %}
+    <nav>
+        <ul>
+            <li class="entry-update"><a href="{% url 'blog-entry-update' pk=object.pk %}">Update</a></li>
+            <li class="entry-delete"><a href="{% url 'blog-entry-delete' pk=object.pk %}">Delete</a></li>
+        </ul>
+    </nav>
+    {% endif %}
+    {% if object.author == object.updated_by %}
+        <p class="subscription">Written by {{ object.author }}</p>
+    {% else %}
+        <p class="subscription">Originally written by {{ object.author }} and updated by {{ object.updated_by|default:'Anonymous' }}</p>
+    {% endif %}
+
+    <section class="body">
+        {{ object.body|linebreaks }}
+    </section>
+</article>
+{% endblock %}
+
