@@ -37,7 +37,7 @@ Usage
 ...         # Start watching
 ...         self._watcher = watch(self, 'status', watch_callback)
 
-See observer_test/src/miniblog/blog/tests/test_observer.py for more detail.
+See `observer_test/src/miniblog/blog/tests/test_observer.py <https://github.com/lambdalisue/django-observer/blob/master/observer_test/src/miniblog/blog/tests/test_observer.py>`_ for more detail.
 
 Settings
 ================
