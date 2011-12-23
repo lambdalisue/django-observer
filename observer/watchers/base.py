@@ -56,7 +56,7 @@ class Watcher(object):
         Watcher._instances.remove(instance)
     @staticmethod
     def unwatch_all():
-        for watcher in Watcher._instances:
+        for watcher in getattr(Watcher, '_instances', []):
             watcher.unwatch()
         Watcher._instances = []
 
