@@ -25,6 +25,12 @@ License:
 """
 __AUTHOR__ = "lambdalisue (lambdalisue@hashnote.net)"
 
+# Note: Why staticmethod is used insted of classmethod
+#
+#   Watcher is used as watcher instance holder and if I use classmethod
+#   for _register/_unregister then the instance list belongs to
+#   each subclass and that is not what I need (if I use 'cls' insted of Watcher)
+#
 class Watcher(object):
     def __init__(self, obj, attr, callback):
         if obj.pk is None:
@@ -34,6 +40,25 @@ class Watcher(object):
         self._obj = obj
         self._attr = attr
         self._callback = callback
+
+        # Register the instance
+        Watcher._register(self)
+
+    @staticmethod
+    def _register(instance):
+        if not hasattr(Watcher, '_instances'):
+            Watcher._instances = []
+        Watcher._instances.append(instance)
+    @staticmethod
+    def _unregister(instance):
+        if not hasattr(Watcher, '_instances'):
+            return
+        Watcher._instances.remove(instance)
+    @staticmethod
+    def unwatch_all():
+        for watcher in Watcher._instances:
+            watcher.unwatch()
+        Watcher._instances = []
 
     def get_attr_value(self):
         """get attribute value"""

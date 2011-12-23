@@ -32,7 +32,8 @@ License:
 __AUTHOR__ = "lambdalisue (lambdalisue@hashnote.net)"
 from django.conf import settings
 
-from watcher.complex import ComplexWatcher
+from watcher import Watcher
+from watcher import ComplexWatcher
 
 __all__ = ['watch']
 
@@ -47,3 +48,8 @@ def watch(obj, attr, callback):
     """
     watcher = settings.OBSERVER_DEFAULT_WATCHER(obj, attr, callback)
     return watcher
+
+def unwatch_all():
+    """Shortcut method for unwatch all watcher"""
+    Watcher.unwatch_all()
+
