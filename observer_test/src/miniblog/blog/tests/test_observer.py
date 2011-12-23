@@ -28,11 +28,11 @@ from django.test import TestCase
 from django.contrib.auth.models import User
 
 from observer import watch
-from observer.watcher.model import ModelWatcher
-from observer.watcher.value import ValueWatcher
-from observer.watcher.relation import RelatedManagerWatcher
-from observer.watcher.relation import ManyRelatedManagerWatcher
-from observer.watcher.complex import ComplexWatcher
+from observer.watchers.model import ModelWatcher
+from observer.watchers.value import ValueWatcher
+from observer.watchers.relation import RelatedManagerWatcher
+from observer.watchers.relation import ManyRelatedManagerWatcher
+from observer.watchers.complex import ComplexWatcher
 
 from ..models import Entry
 

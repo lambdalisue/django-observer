@@ -24,6 +24,9 @@ License:
     limitations under the License.
 """
 __AUTHOR__ = "lambdalisue (lambdalisue@hashnote.net)"
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Note: Why staticmethod is used insted of classmethod
 #
@@ -57,6 +60,7 @@ class Watcher(object):
     @staticmethod
     def unwatch_all():
         for watcher in getattr(Watcher, '_instances', []):
+            logger.debug('%s is unwatched' % watcher)
             watcher.unwatch()
         Watcher._instances = []
 

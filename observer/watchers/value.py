@@ -24,6 +24,7 @@ License:
     limitations under the License.
 """
 __AUTHOR__ = "lambdalisue (lambdalisue@hashnote.net)"
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.signals import pre_save
 from django.db.models.signals import post_save
 
@@ -52,8 +53,11 @@ class ValueWatcher(Watcher):
         if instance.pk is None or instance.pk != self._obj.pk:
             return
         # get previous value from unsaved object
-        unsaved_obj = instance.__class__._default_manager.get(pk=instance.pk)
-        self._previous_value = getattr(unsaved_obj, self._attr)
+        try:
+            unsaved_obj = instance.__class__._default_manager.get(pk=instance.pk)
+            self._previous_value = getattr(unsaved_obj, self._attr)
+        except ObjectDoesNotExist:
+            self._previous_value = None
     def _post_save_reciver(self, sender, instance, **kwargs):
         if self._previous_value is None or instance.pk != self._obj.pk:
             return
