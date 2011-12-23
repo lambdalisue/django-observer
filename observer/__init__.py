@@ -32,8 +32,8 @@ License:
 __AUTHOR__ = "lambdalisue (lambdalisue@hashnote.net)"
 from django.conf import settings
 
-from watcher import Watcher
-from watcher import ComplexWatcher
+from watchers import Watcher
+from watchers import ComplexWatcher
 
 __all__ = ['watch']
 
