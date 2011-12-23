@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 # vim: set fileencoding=utf8:
 """
-initialization django-object-permission
+Watch modification of any type of field in Django model
 
-Add this backend to your ``AUTHENTICATION_BACKENDS`` like below::
+Usage:
+    from observer import watch
+    watcher = watch(model_instance, field_name, callback_function)
 
-    AUTHENTICATION_BACKENDS = (
-        'django.contrib.auth.backends.ModelBackend',
-        'object_permission.backends.ObjectPermBackend',
-    )
+Warning:
+    Call ``observer.unwatch_all()`` in ``tearDown`` method of TestCase in django's test just in case
+
 
 AUTHOR:
     lambdalisue[Ali su ae] (lambdalisue@hashnote.net)

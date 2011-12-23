@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # vim: set fileencoding=utf8:
 """
-short module explanation
-
+Watcher module for watching any relational field
 
 AUTHOR:
     lambdalisue[Ali su ae] (lambdalisue@hashnote.net)

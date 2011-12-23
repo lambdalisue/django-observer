@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # vim: set fileencoding=utf8:
 """
-short module explanation
-
+Watcher module for watching Model
 
 AUTHOR:
     lambdalisue[Ali su ae] (lambdalisue@hashnote.net)
@@ -24,6 +23,7 @@ License:
     limitations under the License.
 """
 __AUTHOR__ = "lambdalisue (lambdalisue@hashnote.net)"
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.signals import pre_save
 from django.db.models.signals import post_save
 from django.db.models.signals import post_delete
@@ -57,11 +57,17 @@ class ModelWatcher(Watcher):
         if instance.pk is None or instance.pk != self._obj.pk:
             return
         # get previous values from unsaved object
-        unsaved_obj = instance.__class__._default_manager.get(pk=instance.pk)
-        if self._previous_values is None:
-            self._previous_values = {}
-        for field_name in self._field_names:
-            self._previous_values[field_name] = getattr(unsaved_obj, field_name)
+        try:
+            unsaved_obj = instance.__class__._default_manager.get(pk=instance.pk)
+        except ObjectDoesNotExist:
+            unsaved_obj = None
+        if unsaved_obj:
+            if self._previous_values is None:
+                self._previous_values = {}
+            for field_name in self._field_names:
+                self._previous_values[field_name] = getattr(unsaved_obj, field_name)
+        else:
+            self._previous_values = None
     def _post_save_reciver(self, sender, instance, **kwargs):
         if self._previous_values is None or instance.pk != self._obj.pk:
             return
