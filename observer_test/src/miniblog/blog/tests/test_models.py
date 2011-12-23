@@ -27,6 +27,7 @@ __AUTHOR__ = "lambdalisue (lambdalisue@hashnote.net)"
 from django.test import TestCase
 
 from ..models import Entry
+from ..models import TaggedItem
 
 class EntryModelTestCase(TestCase):
     def test_creation(self):
@@ -64,15 +65,15 @@ class EntryModelTestCase(TestCase):
 
         entry.title = ''
         self.assertRaises(ValidationError, entry.full_clean)
+        entry.title = 'foo'
 
         entry.body = ''
         self.assertRaises(ValidationError, entry.full_clean)
+        entry.body = 'bar'
 
         entry.title = '*' * 100
         self.assertRaises(ValidationError, entry.full_clean)
-
-        entry.title = '!#$%&()'
-        self.assertRaises(ValidationError, entry.full_clean)
+        entry.title = 'foo'
 
     def test_deletion(self):
         """blog.Entry: deletion works correctly"""
@@ -93,3 +94,60 @@ class EntryModelTestCase(TestCase):
         # None for AnonymousUser (AuthorDefaultBackend)
         self.assertEqual(entry.author, None)
         self.assertEqual(entry.updated_by, None)
+
+class TaggedItemModelTestCase(TestCase):
+    def setUp(self):
+        self.foo = Entry.objects.create(title='foo', body='foo')
+        self.bar = Entry.objects.create(title='bar', body='bar')
+        self.hoge = Entry.objects.create(title='hoge', body='hoge')
+
+    def test_creation(self):
+        """blog.TaggedItem: creation works correctly"""
+        item = TaggedItem(content_object=self.foo, tag='foo')
+        item.full_clean()
+        self.assertEqual(item.content_object, self.foo)
+        self.assertEqual(item.tag, 'foo')
+
+        item.save()
+        item = TaggedItem.objects.get(pk=item.pk)
+        self.assertEqual(item.content_object, self.foo)
+        self.assertEqual(item.tag, 'foo')
+
+    def test_modification(self):
+        """blog.TaggedItem: modification works correctly"""
+        item = TaggedItem(content_object=self.foo, tag='foo')
+        item.full_clean()
+        item.save()
+
+        item.content_object = self.bar
+        item.tag = 'bar'
+        item.full_clean()
+        item.save()
+        item = TaggedItem.objects.get(pk=item.pk)
+        self.assertEqual(item.content_object, self.bar)
+        self.assertEqual(item.tag, 'bar')
+
+    def test_validation(self):
+        """blog.TaggedItem: validation works correctly"""
+        from django.core.exceptions import ValidationError
+        item = TaggedItem(content_object=self.foo, tag='foo')
+        item.full_clean()
+        item.save()
+
+        item.tag = ''
+        self.assertRaises(ValidationError, item.full_clean)
+        item.tag = 'foo'
+
+        item.tag = '*' * 300
+        self.assertRaises(ValidationError, item.full_clean)
+        item.tag = 'foo'
+
+    def test_deletion(self):
+        """blog.TaggedItem: deletion works correctly"""
+        item = TaggedItem(content_object=self.foo, tag='foo')
+        item.full_clean()
+        item.save()
+
+        num = TaggedItem.objects.all().count()
+        item.delete()
+        self.assertEqual(TaggedItem.objects.all().count(), num - 1)

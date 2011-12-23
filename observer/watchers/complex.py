@@ -31,9 +31,11 @@ from value import ValueWatcher
 from model import ModelWatcher
 from relation import RelatedManagerWatcher
 from relation import ManyRelatedManagerWatcher
+from relation import GenericRelatedObjectManagerWatcher
 
 RelatedManagerTypeName = "<class 'django.db.models.fields.related.RelatedManager'>"
 ManyRelatedManagerTypeName = "<class 'django.db.models.fields.related.ManyRelatedManager'>"
+GenericRelatedObjectManagerTypeName = "<class 'django.contrib.contenttypes.generic.GenericRelatedObjectManager'>"
 
 class ComplexWatcher(Watcher):
     """Watch any field as you think
@@ -47,7 +49,7 @@ class ComplexWatcher(Watcher):
         Watch the field modification and the model instance modification.
         If you modify the related instance of field, callback is called.
 
-    Relatin (ForeignKey[reverse], ManyToManyField):
+    Relatin (ForeignKey[reverse], ManyToManyField, GenericRelation):
         Watch the field modification (add, remove, clear) and each related model
         instance modification. If you modify the related instance of collection,
         callback is called.
@@ -64,6 +66,7 @@ class ComplexWatcher(Watcher):
         self._model_watchers = []
         self._related_manager_watcher = None
         self._many_related_manager_watcher = None
+        self._generic_related_object_manager_watcher = None
 
         if isinstance(attr_value, Model):
             self._set_value_watcher()
@@ -74,6 +77,9 @@ class ComplexWatcher(Watcher):
         elif str(type(attr_value)) == ManyRelatedManagerTypeName:
             self._set_many_related_manager_watcher()
             self._set_model_watchers()
+        elif str(type(attr_value)) == GenericRelatedObjectManagerTypeName:
+            self._set_generic_related_object_manager_watcher()
+            self._set_model_watchers()
         else:
             self._set_value_watcher()
 
@@ -83,6 +89,7 @@ class ComplexWatcher(Watcher):
         self._delete_watcher('_model_watchers')
         self._delete_watcher('_related_manager_watcher')
         self._delete_watcher('_many_related_manager_watcher')
+        self._delete_watcher('_generic_related_object_manager_watcher')
 
     def _delete_watcher(self, name):
         if name == '_model_watchers':
@@ -112,6 +119,9 @@ class ComplexWatcher(Watcher):
     def _set_many_related_manager_watcher(self):
         self._delete_watcher('_many_related_manager_watcher')
         self._many_related_manager_watcher = ManyRelatedManagerWatcher(self._obj, self._attr, self._many_related_manager_watcher_callback)
+    def _set_generic_related_object_manager_watcher(self):
+        self._delete_watcher('_generic_related_object_manager_watcher')
+        self._generic_related_object_manager_watcher = GenericRelatedObjectManagerWatcher(self._obj, self._attr, self._generic_related_object_manager_watcher_callback)
 
     def _value_watcher_callback(self, sender, obj, attr):
         self.call()
@@ -126,5 +136,9 @@ class ComplexWatcher(Watcher):
         self._set_model_watchers()
         
     def _many_related_manager_watcher_callback(self, sender, obj, attr):
+        self.call()
+        self._set_model_watchers()
+
+    def _generic_related_object_manager_watcher_callback(self, sender, obj, attr):
         self.call()
         self._set_model_watchers()

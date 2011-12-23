@@ -1,5 +1,14 @@
 Watch modification of any type of field in Django's model and call registered callback function
 
+This observer can watch
+
+-   Any value type of field (CharField, IntegerField ...)
+-   Any Model type of field (ForeignKey, OneToOneField, GenericForeignKey)
+-   Any RelatedManager type of field (field automatically created via ``related_name`` of ForeignKey)
+-   Any ManyRelatedManager type of field (ManyToManyField)
+-   Any GenericRelatedObjectManager type of field (GenericRelation)
+-   Any Model instance
+
 
 Install
 ==============

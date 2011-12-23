@@ -6,7 +6,7 @@
 #
 from setuptools import setup, find_packages
 
-version = "0.1rc4"
+version = "0.2rc1"
 
 def read(filename):
     import os.path
@@ -15,7 +15,7 @@ def read(filename):
 setup(
     name="django-observer",
     version=version,
-    description = "Watch any object/field/relation of django and recive signals",
+    description = "Watch any object/field/relation/generic relation of django and recive signals",
     long_description=read('README.rst'),
     classifiers = [
         'Framework :: Django',
@@ -24,7 +24,7 @@ setup(
         'Programming Language :: Python',
         'Topic :: Internet :: WWW/HTTP',
     ],
-    keywords = "django signals object field relation",
+    keywords = "django signals object field relation generic",
     author = "Alisue",
     author_email = "lambdalisue@hashnote.net",
     url=r"https://github.com/lambdalisue/django-observer",

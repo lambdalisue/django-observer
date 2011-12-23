@@ -24,6 +24,7 @@ License:
     limitations under the License.
 """
 __AUTHOR__ = "lambdalisue (lambdalisue@hashnote.net)"
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import ForeignKey
 from django.db.models.signals import pre_save
 from django.db.models.signals import post_save
@@ -32,7 +33,7 @@ from django.db.models.signals import m2m_changed
 
 from base import Watcher
 
-__all__ = ['ManyRelatedManagerWatcher', 'RelatedManagerWatcher']
+__all__ = ['ManyRelatedManagerWatcher', 'RelatedManagerWatcher', 'GenericRelatedObjectManagerWatcher']
 
 class ManyRelatedManagerWatcher(Watcher):
     """Watcher class for wathching many to many relation attribute"""
@@ -93,27 +94,30 @@ class RelatedManagerWatcher(Watcher):
         if instance.pk is None:
             unsaved_obj = None
         else:
-            unsaved_obj = instance.__class__._default_manager.get(pk=instance.pk)
-            unsaved_related_attr_value = self._get_related_attr_value(unsaved_obj)
+            try:
+                unsaved_obj = instance.__class__._default_manager.get(pk=instance.pk)
+                unsaved_related_attr_value = self._get_related_attr_value(unsaved_obj)
+            except ObjectDoesNotExist:
+                unsaved_obj = None
         related_attr_value = self._get_related_attr_value(instance)
         if not related_attr_value:
             return
         if related_attr_value.pk == self._obj.pk:
             if not unsaved_obj or getattr(unsaved_related_attr_value, 'pk', None) != self._obj.pk:
                 # New relation has created
-                self._related_updated[instance] = True
+                self._related_updated[id(instance)] = True
                 return
         elif unsaved_obj and unsaved_related_attr_value.pk == self._obj.pk:
             if related_attr_value.pk != self._obj.pk:
                 # Old relation has removed
-                self._related_updated[instance] = True
+                self._related_updated[id(instance)] = True
                 return
-        self._related_updated[instance] = False
+        self._related_updated[id(instance)] = False
     def _post_save_reciver(self, sender, instance, **kwargs):
         related_attr_value = self._get_related_attr_value(instance)
         if not related_attr_value:
             return
-        if self._related_updated.pop(instance, None):
+        if self._related_updated.pop(id(instance), None):
             self.call()
 
     def _post_delete_reciver(self, sender, instance, **kwargs):
@@ -122,3 +126,18 @@ class RelatedManagerWatcher(Watcher):
             return
         if related_attr_value.pk == self._obj.pk:
             self.call()
+
+class GenericRelatedObjectManagerWatcher(RelatedManagerWatcher):
+    """Watcher class for wathching generic relation attribute"""
+    def __init__(self, obj, attr, callback):
+        super(GenericRelatedObjectManagerWatcher, self).__init__(obj, attr, callback)
+        # remove unused attrs
+        self._related_attr_name = None
+        # add required instance
+        rel = self.get_attr_value()
+        self._object_id_field_name = rel.object_id_field_name
+        self._content_type_field_name = rel.content_type_field_name
+    def _get_related_attr_value(self, instance):
+        content_type = getattr(instance, self._content_type_field_name)
+        object_id = getattr(instance, self._object_id_field_name)
+        return content_type.get_object_for_this_type(pk=object_id)

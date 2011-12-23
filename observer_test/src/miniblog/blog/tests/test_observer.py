@@ -32,9 +32,11 @@ from observer.watchers.model import ModelWatcher
 from observer.watchers.value import ValueWatcher
 from observer.watchers.relation import RelatedManagerWatcher
 from observer.watchers.relation import ManyRelatedManagerWatcher
+from observer.watchers.relation import GenericRelatedObjectManagerWatcher
 from observer.watchers.complex import ComplexWatcher
 
 from ..models import Entry
+from ..models import TaggedItem
 
 class ModelWatcherTestCase(TestCase):
     def test_watch_after_create(self):
@@ -46,6 +48,7 @@ class ModelWatcherTestCase(TestCase):
             obj.watch_callback_called = True
         # watch -> initial save
         entry = Entry(title='foo', body='bar')
+        entry.watch_callback_called = False
         entry.save()
         watcher = ModelWatcher(entry, None, callback)
         self.assertEqual(entry.watch_callback_called, False)
@@ -79,6 +82,7 @@ class ValueWatcherTestCase(TestCase):
             obj.watch_callback_called = True
         # initial save -> watch
         entry = Entry(title='foo', body='bar')
+        entry.watch_callback_called = False
         entry.save()
         watcher = ValueWatcher(entry, 'title', callback)
         self.assertEqual(entry.watch_callback_called, False)
@@ -115,6 +119,10 @@ class RelatedManagerWatcherTestCase(TestCase):
         watcher = RelatedManagerWatcher(foo, 'entrys_create', callback)
         self.assertEqual(foo.watch_callback_called, False)
 
+        foo.email = 'foofoo@test.com'
+        foo.save()
+        self.assertEqual(foo.watch_callback_called, False)
+
         entry = Entry.objects.create(title='Hello', author=foo)
         entry.save()
         self.assertEqual(foo.watch_callback_called, True)
@@ -144,6 +152,7 @@ class ManyRelatedManagerWatcherTestCase(TestCase):
             obj.watch_callback_called = True
         # initial save -> watch
         entry = Entry(title='foo', body='bar')
+        entry.watch_callback_called = False
         entry.save()
         watcher = ManyRelatedManagerWatcher(entry, 'collaborators', callback)
         self.assertEqual(entry.watch_callback_called, False)
@@ -180,6 +189,44 @@ class ManyRelatedManagerWatcherTestCase(TestCase):
         self.assertRaises(AttributeError, ManyRelatedManagerWatcher, entry, None, None)
 
 
+class GenericRelatedObjectManagerWatcherTestCase(TestCase):
+    def test_watch_after_create(self):
+        """observer.GenericRelatedObjectManagerWatcher: watch after create works correctly"""
+        def callback(sender, obj, attr):
+            assert isinstance(sender, GenericRelatedObjectManagerWatcher)
+            self.assertEqual(obj, entry)
+            self.assertEqual(attr, 'tags')
+            obj.watch_callback_called = True
+        # initial save -> watch
+        entry = Entry(title='foo', body='foo')
+        entry.watch_callback_called = False
+        entry.save()
+        watcher = GenericRelatedObjectManagerWatcher(entry, 'tags', callback)
+        self.assertEqual(entry.watch_callback_called, False)
+
+        entry.title = 'foofoo'
+        entry.save()
+        self.assertEqual(entry.watch_callback_called, False)
+
+        tag1 = TaggedItem(content_object=entry, tag='foo')
+        tag1.save()
+        self.assertEqual(entry.watch_callback_called, True)
+        entry.watch_callback_called = False
+
+        tag1.delete()
+        self.assertEqual(entry.watch_callback_called, True)
+        entry.watch_callback_called = False
+
+        # teardown
+        watcher.unwatch()
+
+    def test_watch_before_create(self):
+        """observer.GenericRelatedObjectManagerWatcher: watch before create fails correctly"""
+        # initial save -> watch
+        entry = Entry(title='foo', body='bar')
+        self.assertRaises(AttributeError, GenericRelatedObjectManagerWatcher, entry, None, None)
+
+
 class ComplexWatcherTestCase(TestCase):
     def test_watch_one_to_many(self):
         """observer.OneToMany: watch one to many field works correctly
@@ -193,6 +240,7 @@ class ComplexWatcherTestCase(TestCase):
         bar = User.objects.get(username='bar')
 
         entry = Entry(title='foo', body='bar', author=foo)
+        entry.watch_callback_called = False
         entry.save()
         watcher = ComplexWatcher(entry, 'author', callback)
 
@@ -251,6 +299,11 @@ class ComplexWatcherTestCase(TestCase):
         entry2.save()
         self.assertEqual(foo.watch_callback_called, False)
 
+        # Delete related entry
+        entry1.delete()
+        self.assertEqual(foo.watch_callback_called, True)
+        foo.watch_callback_called = False
+
         # teardown
         watcher.unwatch()
 
@@ -265,8 +318,8 @@ class ComplexWatcherTestCase(TestCase):
         foo = User.objects.get(username='foo')
         bar = User.objects.get(username='bar')
         entry = Entry.objects.create(title='1')
+        entry.watch_callback_called = False
         watcher = ComplexWatcher(entry, 'collaborators', callback)
-
 
         # Add collaborators
         entry.collaborators.add(foo, bar)
@@ -296,5 +349,87 @@ class ComplexWatcherTestCase(TestCase):
         bar.save()
         self.assertEqual(entry.watch_callback_called, False)
         
+        # Delete related collaborator instance
+        foo.delete()
+        self.assertEqual(entry.watch_callback_called, True)
+        entry.watch_callback_called = False
+
         # teardown
         watcher.unwatch()
+
+    def test_watch_generic_foreign_key(self):
+        """observer.GenericForeignKey: watch generic foreign key field works correctly
+
+        Watch `content_object` and all field of content_object related model instance
+        """
+        def callback(sender, obj, attr):
+            obj.watch_callback_called = True
+
+        foo = Entry.objects.create(title='foo', body='foo')
+        bar = Entry.objects.create(title='bar', body='bar')
+
+        item = TaggedItem(content_object=foo, tag='foo')
+        item.watch_callback_called = False
+        item.save()
+        watcher = ComplexWatcher(item, 'content_object', callback)
+
+        bar.title = 'barbar'
+        bar.save()
+        self.assertEqual(item.watch_callback_called, False)
+
+        foo.title = 'foofoo'
+        foo.save()
+        self.assertEqual(item.watch_callback_called, True)
+        item.watch_callback_called = False
+
+        item.content_object = bar
+        item.save()
+        self.assertEqual(item.watch_callback_called, True)
+        item.watch_callback_called = False
+
+        bar.title = 'bar'
+        bar.save()
+        self.assertEqual(item.watch_callback_called, True)
+        item.watch_callback_called = False
+
+        # teardown
+        watcher.unwatch()
+
+    def test_watch_generic_relation(self):
+        """observer.GenericRelation: watch generic relation field works correctly
+        
+        Watch `tags` and all field of each `tags` model instance
+        """
+        def callback(sender, obj, attr):
+            obj.watch_callback_called = True
+
+        entry = Entry.objects.create(title='foo')
+        entry.watch_callback_called = False
+        watcher = ComplexWatcher(entry, 'tags', callback)
+
+        foo = TaggedItem(content_object=User.objects.get(pk=1), tag='foo') 
+        foo.save()
+        self.assertEqual(entry.watch_callback_called, False)
+
+        bar = TaggedItem(content_object=entry, tag='bar') 
+        bar.save()
+        self.assertEqual(entry.watch_callback_called, True)
+        entry.watch_callback_called = False
+
+        hoge = TaggedItem(content_object=entry, tag='hoge') 
+        hoge.save()
+        self.assertEqual(entry.watch_callback_called, True)
+        entry.watch_callback_called = False
+
+        bar.tag = 'barbar'
+        bar.save()
+        self.assertEqual(entry.watch_callback_called, True)
+        entry.watch_callback_called = False
+
+        hoge.delete()
+        self.assertEqual(entry.watch_callback_called, True)
+        entry.watch_callback_called = False
+
+        # teardown
+        watcher.unwatch()
+

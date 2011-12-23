@@ -25,9 +25,20 @@ __AUTHOR__ = "lambdalisue (lambdalisue@hashnote.net)"
 __VERSION__ = "0.1.0"
 from django.db import models
 from django.contrib.auth.models import User
+from django.contrib.contenttypes import generic
+from django.contrib.contenttypes.models import ContentType
 from django.utils.text import ugettext_lazy as _
 
 from author.decorators import with_author
+
+class TaggedItem(models.Model):
+    tag = models.SlugField()
+    content_type = models.ForeignKey(ContentType)
+    object_id = models.PositiveIntegerField()
+    content_object = generic.GenericForeignKey('content_type', 'object_id')
+
+    def __unicode__(self):
+        return "Tag %s" % self.tag
 
 # This class decorator (@with_author) is all you need to add `author` and `updated_by` field
 # to particular model.
@@ -37,7 +48,7 @@ from author.decorators import with_author
 #       # brabrabra
 #   Entry = with_author(Entry)
 #
-@with_author
+@with_author    # for testing RelatedManager and Model for observer
 class Entry(models.Model):
     """mini blog entry model
     
@@ -61,10 +72,11 @@ class Entry(models.Model):
     updated_at = models.DateTimeField(_('date and time updated'),
             auto_now=True)
 
+    # for testing ManyRelatedManager with observer
     collaborators = models.ManyToManyField(User, related_name='entries')
 
-    # attribute for testing django-observer
-    watch_callback_called = False
+    # for testing GenericRelation with observer
+    tags = generic.GenericRelation(TaggedItem)
 
     def __unicode__(self):
         return self.title

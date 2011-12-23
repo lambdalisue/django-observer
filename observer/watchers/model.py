@@ -26,6 +26,7 @@ License:
 __AUTHOR__ = "lambdalisue (lambdalisue@hashnote.net)"
 from django.db.models.signals import pre_save
 from django.db.models.signals import post_save
+from django.db.models.signals import post_delete
 
 from base import Watcher
 
@@ -42,6 +43,7 @@ class ModelWatcher(Watcher):
         # Add recivers
         pre_save.connect(self._pre_save_reciver, sender=model, weak=False)
         post_save.connect(self._post_save_reciver, sender=model, weak=False)
+        post_delete.connect(self._post_delete_reciver, sender=model, weak=False)
         # Initialize variable
         self._field_names = [field.name for field in model._meta.fields]
         self._previous_values = None
@@ -73,3 +75,6 @@ class ModelWatcher(Watcher):
             return True
         if not check():
             self.call()
+
+    def _post_delete_reciver(self, sender, instance, **kwargs):
+        self.call()
