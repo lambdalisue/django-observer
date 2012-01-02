@@ -80,7 +80,11 @@ class ModelWatcher(Watcher):
                     return False
             return True
         if not check():
+            # update obj
+            self._obj = instance
             self.call()
 
     def _post_delete_reciver(self, sender, instance, **kwargs):
+        # update obj
+        self._obj = instance
         self.call()

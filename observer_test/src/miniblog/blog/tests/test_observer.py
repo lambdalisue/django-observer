@@ -38,6 +38,12 @@ from observer.watchers.complex import ComplexWatcher
 from ..models import Entry
 from ..models import TaggedItem
 
+#
+# Note:
+#
+#   'obj' of callback is latest instance thus I have to use 'sender._obj' for
+#   testing
+#
 class ModelWatcherTestCase(TestCase):
     def test_watch_after_create(self):
         """observer.ModelWatcher: watch after create works correctly"""
@@ -45,7 +51,7 @@ class ModelWatcherTestCase(TestCase):
             assert isinstance(sender, ModelWatcher)
             self.assertEqual(obj, entry)
             self.assertEqual(attr, None)
-            obj.watch_callback_called = True
+            sender._obj.watch_callback_called = True
         # watch -> initial save
         entry = Entry(title='foo', body='bar')
         entry.watch_callback_called = False
@@ -79,7 +85,7 @@ class ValueWatcherTestCase(TestCase):
             assert isinstance(sender, ValueWatcher)
             self.assertEqual(obj, entry)
             self.assertEqual(attr, 'title')
-            obj.watch_callback_called = True
+            sender._obj.watch_callback_called = True
         # initial save -> watch
         entry = Entry(title='foo', body='bar')
         entry.watch_callback_called = False
@@ -111,7 +117,7 @@ class RelatedManagerWatcherTestCase(TestCase):
             assert isinstance(sender, RelatedManagerWatcher)
             self.assertEqual(obj, foo)
             self.assertEqual(attr, 'entrys_create')
-            obj.watch_callback_called = True
+            sender._obj.watch_callback_called = True
         # initial save -> watch
         foo = User.objects.get(username='foo')
         bar = User.objects.get(username='bar')
@@ -149,7 +155,7 @@ class ManyRelatedManagerWatcherTestCase(TestCase):
             assert isinstance(sender, ManyRelatedManagerWatcher)
             self.assertEqual(obj, entry)
             self.assertEqual(attr, 'collaborators')
-            obj.watch_callback_called = True
+            sender._obj.watch_callback_called = True
         # initial save -> watch
         entry = Entry(title='foo', body='bar')
         entry.watch_callback_called = False
@@ -196,7 +202,7 @@ class GenericRelatedObjectManagerWatcherTestCase(TestCase):
             assert isinstance(sender, GenericRelatedObjectManagerWatcher)
             self.assertEqual(obj, entry)
             self.assertEqual(attr, 'tags')
-            obj.watch_callback_called = True
+            sender._obj.watch_callback_called = True
         # initial save -> watch
         entry = Entry(title='foo', body='foo')
         entry.watch_callback_called = False
@@ -234,7 +240,7 @@ class ComplexWatcherTestCase(TestCase):
         Watch `author` and all field of `author` model instance
         """
         def callback(sender, obj, attr):
-            obj.watch_callback_called = True
+            sender._obj.watch_callback_called = True
 
         foo = User.objects.get(username='foo')
         bar = User.objects.get(username='bar')
@@ -273,7 +279,7 @@ class ComplexWatcherTestCase(TestCase):
         Watch `entrys_create` and all field of each `entrys_create` model instance
         """
         def callback(sender, obj, attr):
-            obj.watch_callback_called = True
+            sender._obj.watch_callback_called = True
 
         foo = User.objects.get(username='foo')
         foo.watch_callback_called = False
@@ -313,7 +319,7 @@ class ComplexWatcherTestCase(TestCase):
         Watch `collaborators` and all field of each `collaborators` model instance
         """
         def callback(sender, obj, attr):
-            obj.watch_callback_called = True
+            sender._obj.watch_callback_called = True
 
         foo = User.objects.get(username='foo')
         bar = User.objects.get(username='bar')
@@ -363,7 +369,7 @@ class ComplexWatcherTestCase(TestCase):
         Watch `content_object` and all field of content_object related model instance
         """
         def callback(sender, obj, attr):
-            obj.watch_callback_called = True
+            sender._obj.watch_callback_called = True
 
         foo = Entry.objects.create(title='foo', body='foo')
         bar = Entry.objects.create(title='bar', body='bar')
@@ -401,7 +407,7 @@ class ComplexWatcherTestCase(TestCase):
         Watch `tags` and all field of each `tags` model instance
         """
         def callback(sender, obj, attr):
-            obj.watch_callback_called = True
+            sender._obj.watch_callback_called = True
 
         entry = Entry.objects.create(title='foo')
         entry.watch_callback_called = False

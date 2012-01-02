@@ -24,6 +24,7 @@ License:
     limitations under the License.
 """
 __AUTHOR__ = "lambdalisue (lambdalisue@hashnote.net)"
+from django.core.exceptions import ObjectDoesNotExist
 import logging
 
 logger = logging.getLogger(__name__)
@@ -74,4 +75,9 @@ class Watcher(object):
 
     def call(self):
         """call callback registered in this watcher"""
-        self._callback(sender=self, obj=self._obj, attr=self._attr)
+        # hand latest instance (self._obj is not latest)
+        try:
+            instance = self._obj.__class__._default_manager.get(pk=self._obj.pk)
+        except ObjectDoesNotExist:
+            instance = self._obj
+        self._callback(sender=self, obj=instance, attr=self._attr)
