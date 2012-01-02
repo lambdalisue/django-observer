@@ -57,9 +57,9 @@ class ValueWatcher(Watcher):
             unsaved_obj = instance.__class__._default_manager.get(pk=instance.pk)
             self._previous_value = getattr(unsaved_obj, self._attr)
         except ObjectDoesNotExist:
-            self._previous_value = None
+            self._previous_value = ObjectDoesNotExist
     def _post_save_reciver(self, sender, instance, **kwargs):
-        if self._previous_value is None or instance.pk != self._obj.pk:
+        if self._previous_value is ObjectDoesNotExist or instance.pk != self._obj.pk:
             return
         # compare the value with previous value
         if self._previous_value != getattr(instance, self._attr):

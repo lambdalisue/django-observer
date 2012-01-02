@@ -68,6 +68,9 @@ class ComplexWatcher(Watcher):
         self._many_related_manager_watcher = None
         self._generic_related_object_manager_watcher = None
 
+        if attr == 'author':
+            print 'attr_value', attr_value
+
         if isinstance(attr_value, Model):
             self._set_value_watcher()
             self._set_model_watcher()
@@ -124,6 +127,7 @@ class ComplexWatcher(Watcher):
         self._generic_related_object_manager_watcher = GenericRelatedObjectManagerWatcher(self._obj, self._attr, self._generic_related_object_manager_watcher_callback)
 
     def _value_watcher_callback(self, sender, obj, attr):
+        print "called"
         self.call()
         if self._model_watcher:
             self._set_model_watcher()
