@@ -245,13 +245,21 @@ class ComplexWatcherTestCase(TestCase):
         foo = User.objects.get(username='foo')
         bar = User.objects.get(username='bar')
 
-        entry = Entry(title='foo', body='bar', author=foo)
+        entry = Entry(title='foo', body='bar', author=None)
         entry.watch_callback_called = False
         entry.save()
         watcher = ComplexWatcher(entry, 'author', callback)
 
         self.assertEqual(entry.watch_callback_called, False)
+        self.assert_(getattr(watcher, '_value_watcher'))
+        self.assert_(getattr(watcher, '_model_watcher'))
 
+        # Set author
+        entry.author = foo
+        entry.save()
+        self.assertEqual(entry.watch_callback_called, True)
+        entry.watch_callback_called = False
+        
         # Change email of author
         foo.email = 'foofoo@test.com'
         foo.save()

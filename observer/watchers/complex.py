@@ -25,6 +25,11 @@ License:
 """
 __AUTHOR__ = "lambdalisue (lambdalisue@hashnote.net)"
 from django.db.models import Model
+from django.db.models import ForeignKey
+from django.db.models import ManyToManyField
+from django.db.models.related import RelatedObject
+from django.contrib.contenttypes.generic import GenericRelation
+from django.db.models.fields import FieldDoesNotExist
 
 from base import Watcher
 from value import ValueWatcher
@@ -36,6 +41,10 @@ from relation import GenericRelatedObjectManagerWatcher
 RelatedManagerTypeName = "<class 'django.db.models.fields.related.RelatedManager'>"
 ManyRelatedManagerTypeName = "<class 'django.db.models.fields.related.ManyRelatedManager'>"
 GenericRelatedObjectManagerTypeName = "<class 'django.contrib.contenttypes.generic.GenericRelatedObjectManager'>"
+
+class DummyWatcher(object):
+    def unwatch(self):
+        pass
 
 class ComplexWatcher(Watcher):
     """Watch any field as you think
@@ -59,6 +68,7 @@ class ComplexWatcher(Watcher):
     def __init__(self, obj, attr, callback):
         super(ComplexWatcher, self).__init__(obj, attr, callback)
 
+        attr_type = self._get_attr_type()
         attr_value = self.get_attr_value()
 
         self._value_watcher = None
@@ -68,20 +78,32 @@ class ComplexWatcher(Watcher):
         self._many_related_manager_watcher = None
         self._generic_related_object_manager_watcher = None
 
-        if isinstance(attr_value, Model):
+        if isinstance(attr_type, ForeignKey) or \
+                isinstance(attr_value, Model):
             self._set_value_watcher()
             self._set_model_watcher()
-        elif str(type(attr_value)) == RelatedManagerTypeName:
+        elif isinstance(attr_type, RelatedObject) or \
+                str(type(attr_value)) == RelatedManagerTypeName:
             self._set_related_manager_watcher()
             self._set_model_watchers()
-        elif str(type(attr_value)) == ManyRelatedManagerTypeName:
+        elif isinstance(attr_type, ManyToManyField) or \
+                str(type(attr_value)) == ManyRelatedManagerTypeName:
             self._set_many_related_manager_watcher()
             self._set_model_watchers()
-        elif str(type(attr_value)) == GenericRelatedObjectManagerTypeName:
+        elif isinstance(attr_type, GenericRelation) or \
+                str(type(attr_value)) == GenericRelatedObjectManagerTypeName:
             self._set_generic_related_object_manager_watcher()
             self._set_model_watchers()
         else:
             self._set_value_watcher()
+
+    def _get_attr_type(self):
+        meta = self._obj._meta
+        try:
+            field_object, model, direct, m2m = meta.get_field_by_name(self._attr)
+        except FieldDoesNotExist:
+            field_object = None
+        return field_object
 
     def unwatch(self):
         self._delete_watcher('_value_watcher')
@@ -108,7 +130,12 @@ class ComplexWatcher(Watcher):
         self._value_watcher = ValueWatcher(self._obj, self._attr, self._value_watcher_callback)
     def _set_model_watcher(self):
         self._delete_watcher('_model_watcher')
-        self._model_watcher = ModelWatcher(self.get_attr_value(), None, self._model_watcher_callback)
+        attr_value = self.get_attr_value()
+        if attr_value:
+            self._model_watcher = ModelWatcher(attr_value, None, self._model_watcher_callback)
+        else:
+            # for ForeignKey(null=True)
+            self._model_watcher = DummyWatcher()
     def _set_model_watchers(self):
         self._delete_watcher('_model_watchers')
         for model in self.get_attr_value().iterator():
