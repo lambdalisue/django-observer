@@ -53,4 +53,3 @@ def watch(obj, attr, callback):
 def unwatch_all():
     """Shortcut method for unwatch all watcher"""
     Watcher.unwatch_all()
-

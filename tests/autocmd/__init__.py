@@ -32,7 +32,7 @@ from django.db.models import signals
 
 settings.AUTO_CREATE_USER = getattr(settings, 'AUTO_CREATE_USER', True)
 
-if settings.DEBUG and settings.AUTO_CREATE_USER:
+if settings.AUTO_CREATE_USER:
     # From http://stackoverflow.com/questions/1466827/ --
     #
     # Prevent interactive question about wanting a superuser created. (This code
@@ -53,12 +53,14 @@ if settings.DEBUG and settings.AUTO_CREATE_USER:
         try:
             User.objects.get(username=USERNAME)
         except User.DoesNotExist:
-            print '*' * 80
-            print 'Creating test user -- login: %s, password: %s' % (USERNAME, PASSWORD)
-            print '*' * 80
+            if verbosity > 0:
+                print '*' * 80
+                print 'Creating test user -- login: %s, password: %s' % (USERNAME, PASSWORD)
+                print '*' * 80
             assert User.objects.create_superuser(USERNAME, EMAIL, PASSWORD)
         else:
-            print 'Test user already exists. -- login: %s, password: %s' % (USERNAME, PASSWORD)
+            if verbosity > 0:
+                print 'Test user already exists. -- login: %s, password: %s' % (USERNAME, PASSWORD)
     signals.post_syncdb.disconnect(
         create_superuser,
         sender=auth_models,
