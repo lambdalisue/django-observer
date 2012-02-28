@@ -38,16 +38,14 @@ from watchers import ComplexWatcher
 
 __all__ = ['watch']
 
-settings.OBSERVER_DEFAULT_WATCHER = \
-        getattr(settings, 'OBSERVER_DEFAULT_WATCHER', ComplexWatcher)
-
 def watch(obj, attr, callback):
     """Shortcut method for creating Watcher instance
     
     If you want to use different watcher class as default, set
     'OBSERVER_DEFAULT_WATCHER' in your settings.py
     """
-    watcher = settings.OBSERVER_DEFAULT_WATCHER(obj, attr, callback)
+    watcher_class = getattr(settings, 'OBSERVER_DEFAULT_WATCHER', ComplexWatcher)
+    watcher = watcher_class(obj, attr, callback)
     return watcher
 
 def unwatch_all():

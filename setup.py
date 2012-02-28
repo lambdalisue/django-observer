@@ -30,15 +30,16 @@ setup(
     url=r"https://github.com/lambdalisue/django-observer",
     download_url = r"https://github.com/lambdalisue/django-observer/tarball/master",
     license = 'MIT',
-    packages = find_packages(),
+    packages = find_packages(exclude=['tests']),
     include_package_data = False,
     zip_safe = True,
     install_requires=[
         'distribute',
         'setuptools-git',
+        'django>=1.2',
         ],
     tests_require = [
-        'django>=1.2',
+        'PyYAML',
         'django-author',
     ],
     test_suite='tests.runtests.runtests',
