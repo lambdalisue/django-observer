@@ -29,7 +29,7 @@
     is_active: true
     is_superuser: false
     is_staff: false
-- model: blog.entry
+- model: blogs.entry
   pk: 1
   fields:
     author: 1
@@ -83,7 +83,7 @@
       love is all you need, love is all you need,love is all you need, love is all you need, oh yeah oh hell yea! love is all you need love is all you need love is all you need
     created_at: 2000-01-01
     updated_at: 2000-01-01
-- model: blog.entry
+- model: blogs.entry
   pk: 2
   fields:
     author: 2
@@ -120,7 +120,7 @@
       Can't buy me love
     created_at: 2000-01-01
     updated_at: 2000-01-01
-- model: blog.entry
+- model: blogs.entry
   pk: 3
   fields:
     author: 3
@@ -176,7 +176,7 @@
       Oh, yeah
     created_at: 2000-01-01
     updated_at: 2000-01-01
-- model: blog.entry
+- model: blogs.entry
   pk: 4
   fields:
     author: 4

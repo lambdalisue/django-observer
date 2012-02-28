@@ -40,7 +40,6 @@ setup(
         ],
     tests_require = [
         'PyYAML',
-        'django-author',
     ],
-    test_suite='tests.runtests.runtests',
+    test_suite='runtests.runtests',
 )

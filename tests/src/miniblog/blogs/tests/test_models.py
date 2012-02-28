@@ -30,6 +30,7 @@ from ..models import Entry
 from ..models import TaggedItem
 
 class EntryModelTestCase(TestCase):
+
     def test_creation(self):
         """blog.Entry: creation works correctly"""
         entry = Entry(title='foo', body='bar')
