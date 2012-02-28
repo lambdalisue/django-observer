@@ -28,8 +28,8 @@ License:
 """
 __AUTHOR__ = "lambdalisue (lambdalisue@hashnote.net)"
 import os, sys
-os.environ['DJANGO_SETTINGS_MODULE'] = 'tests.settings'
-test_dir = os.path.dirname(__file__)
+os.environ['DJANGO_SETTINGS_MODULE'] = 'miniblog.settings'
+test_dir = os.path.join(os.path.dirname(__file__), 'tests', 'src')
 sys.path.insert(0, test_dir)
 
 from django.test.utils import get_runner
@@ -39,7 +39,7 @@ def runtests(verbosity=1, interactive=True):
     """Run Django Test"""
     TestRunner = get_runner(settings)
     test_runner = TestRunner(verbosity=verbosity, interactive=interactive)
-    failures = test_runner.run_tests(['blog'])
+    failures = test_runner.run_tests(['blogs'])
     sys.exit(bool(failures))
 
 if __name__ == '__main__':

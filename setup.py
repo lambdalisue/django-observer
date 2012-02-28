@@ -6,7 +6,7 @@
 #
 from setuptools import setup, find_packages
 
-version = "0.4.0"
+version = "0.4.1"
 
 def read(filename):
     import os.path
@@ -40,7 +40,6 @@ setup(
         ],
     tests_require = [
         'PyYAML',
-        'django-author',
     ],
-    test_suite='tests.runtests.runtests',
+    test_suite='runtests.runtests',
 )

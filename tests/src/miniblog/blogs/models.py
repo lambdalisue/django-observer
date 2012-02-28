@@ -29,8 +29,6 @@ from django.contrib.contenttypes import generic
 from django.contrib.contenttypes.models import ContentType
 from django.utils.text import ugettext_lazy as _
 
-from author.decorators import with_author
-
 class TaggedItem(models.Model):
     tag = models.SlugField()
     content_type = models.ForeignKey(ContentType)
@@ -40,15 +38,6 @@ class TaggedItem(models.Model):
     def __unicode__(self):
         return "Tag %s" % self.tag
 
-# This class decorator (@with_author) is all you need to add `author` and `updated_by` field
-# to particular model.
-# If you are using Python under 2.4, use the following code insted::
-#
-#   class Entry(models.Mode):
-#       # brabrabra
-#   Entry = with_author(Entry)
-#
-@with_author    # for testing RelatedManager and Model for observer
 class Entry(models.Model):
     """mini blog entry model
     
@@ -77,6 +66,9 @@ class Entry(models.Model):
 
     # for testing GenericRelation with observer
     tags = generic.GenericRelation(TaggedItem)
+
+    author = models.ForeignKey(User, related_name='entrys_create', blank=True, null=True)
+    updated_by = models.ForeignKey(User, related_name='entrys_update', blank=True, null=True)
 
     def __unicode__(self):
         return self.title
