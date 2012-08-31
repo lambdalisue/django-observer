@@ -42,7 +42,10 @@ class ObserverMixin(object):
     def save(self, *args, **kwargs):
         # register watchers
         self._register_watchers()
-        return super(ObserverMixin, self).save(*args, **kwargs)
+        try:
+            super(ObserverMixin, self).save(*args, **kwargs)
+        finally:
+            self._unregister_watchers()
     
     def _not_registered_observers(self):
         watched_attrs = map(lambda watcher: watcher._attr, self._registered_watchers)
@@ -77,3 +80,11 @@ class ObserverMixin(object):
                 self._registered_watchers.append(watch(self, attr_name, callback))
             else:
                 log.warning('Unable to resolve callback for: %s in %s', attr_name, self.__class__)
+                
+    def _unregister_watchers(self):
+        try:
+            while True:
+                watcher = self._registered_watchers.pop()
+                watcher.unwatch()
+        except IndexError:
+            pass
