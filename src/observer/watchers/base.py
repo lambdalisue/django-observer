@@ -1,57 +1,129 @@
 from django.core.exceptions import ObjectDoesNotExist
-import logging
+from observer.utils.registry import registry
 
-logger = logging.getLogger(__name__)
 
-# Note: Why staticmethod is used insted of classmethod
-#
-#   Watcher is used as watcher instance holder and if I use classmethod
-#   for _register/_unregister then the instance list belongs to
-#   each subclass and that is not what I need (if I use 'cls' insted of Watcher)
-#
 class Watcher(object):
-    def __init__(self, obj, attr, callback):
+    """
+    A base class of watcher.
+    """
+    @staticmethod
+    def unwatch_all():
+        """
+        Unwatch all watchers in this Python session
+        """
+        for watcher in registry:
+            watcher.unwatch()
+        registry.clear()
+
+    def __init__(self, obj, attr, callback, start_watch=True):
+        """
+        Constructor
+
+        It construct watcher and start watch.
+
+        Args:
+            obj (obj): A target obj
+            attr (str): A name of attribute
+            callback (fn): A callback function
+            start_watch (bool): If it is True, automatically start watch.
+                Default value is True
+
+        Raises:
+            AttributeError: When the obj does not have primary key
+        """
         if obj.pk is None:
             raise AttributeError(
-                    """'%s' instance needs to have primary key before """
-                    """observer can watch the instance""" % obj.__class__.__name__)
+                "'%s' instance needs to have primary key before "
+                "observer can watch the instance" % obj.__class__.__name__)
         self._obj = obj
         self._attr = attr
         self._callback = callback
-
         # Register the instance
-        Watcher._register(self)
+        registry.register(self)
+        # Start watch
+        if start_watch:
+            self.watch()
 
-    @staticmethod
-    def _register(instance):
-        if not hasattr(Watcher, '_instances'):
-            Watcher._instances = []
-        Watcher._instances.append(instance)
-    @staticmethod
-    def _unregister(instance):
-        if not hasattr(Watcher, '_instances'):
-            return
-        Watcher._instances.remove(instance)
-    @staticmethod
-    def unwatch_all():
-        for watcher in getattr(Watcher, '_instances', []):
-            logger.debug('%s is unwatched' % watcher)
-            watcher.unwatch()
-        Watcher._instances = []
+    @property
+    def obj(self):
+        return self._obj
 
-    def get_attr_value(self):
-        """get attribute value"""
-        return getattr(self._obj, self._attr)
+    @property
+    def attr(self):
+        return self._attr
+
+    @property
+    def callback(self):
+        return self._callback
+
+    def get_attr_value(self, obj=None):
+        """
+        Get specified attribute value of obj
+
+        Args:
+            obj (instance or None): A target object. If it is not specified,
+                cached obj is used.
+
+        Return:
+            any
+        """
+        return getattr(obj or self._obj, self._attr)
+
+    def watch(self):
+        """
+        Start watching the object
+        """
+        raise NotImplementedError
 
     def unwatch(self):
-        """remove all receivers used in this watcher"""
+        """
+        Stop watching the object
+        """
         raise NotImplementedError
 
     def call(self):
-        """call callback registered in this watcher"""
-        # hand latest instance (self._obj is not latest)
+        """
+        Call the registered callback with watched object
+        """
+        obj = self.get_object()
+        self.callback(sender=self, obj=obj, attr=self._attr)
+
+    def get_model(self):
+        """
+        Get model of this watcher watched.
+
+        Returns:
+            class (model of the cached_obj)
+        """
+        return self._obj.__class__
+
+    def get_object(self, use_cached=True):
+        """
+        Get object which this watcher watched.
+        This method try to load the latest object instance from the database.
+
+        Args:
+            use_cached (bool): If True, use cached obj when no object is found
+
+        Raises:
+            ObjectDoesNotExist: If use_cached is False and the object is not
+                found in the database
+
+        Returns:
+            obj
+        """
+        default_manager = self.get_model()._default_manager
+        # while self._obj is not the latest instance, try to get the latest
+        # instance from a database
         try:
-            instance = self._obj.__class__._default_manager.get(pk=self._obj.pk)
+            obj = default_manager.get(pk=self._obj.pk)
         except ObjectDoesNotExist:
-            instance = self._obj
-        self._callback(sender=self, obj=instance, attr=self._attr)
+            if not use_cached:
+                raise
+            obj = self._obj
+        return obj
+
+    def _validate_signal_instance(self, instance):
+        if instance.pk != self.get_object().pk:
+            return False
+        return True

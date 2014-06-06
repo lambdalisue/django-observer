@@ -1,7 +1,7 @@
 from django.test import TestCase
 from observer.watchers.model import ModelWatcher
 from observer.tests.test_watchers.mixin import ObserverWatcherTestCaseMixin
-from observer.tests.compat import skip
+#from observer.tests.compat import skip
 
 
 class ObserverModelWatcherTestCase(TestCase, ObserverWatcherTestCaseMixin):
@@ -25,6 +25,4 @@ class ObserverModelWatcherTestCase(TestCase, ObserverWatcherTestCaseMixin):
         self.assertTrue(self.callback.called,
                         'The callback should be called')
 
-    @skip("ModelWatcher watch any change of the model thus skip this.")
-    def test_watcher_callback_not_called_with_unwatched_modification(self):
-        pass
+    test_watcher_callback_not_called_with_unwatched_modification = None

@@ -8,4 +8,4 @@ from appconf import AppConf
 
 
 class ObserverAppConf(AppConf):
-    pass
+    DEFAULT_WATCHER = 'observer.watchers.ComplexWatcher'
