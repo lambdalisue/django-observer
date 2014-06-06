@@ -1,47 +1,58 @@
 #!/usr/bin/env python
-# vim: set fileencoding=utf8:
-"""
-Run Django Test with Python setuptools test command
+#==============================================================================
+# A generic django app test running script.
+#
+# Author:   Alisue <lambdaliuse@hashnote.net>
+# License:  MIT license
+#==============================================================================
+import os
+import sys
+import optparse     # argparse is prefered but it require python 2.7 or higher
+
+# You can defined the default test apps here
+DEFAULT_TEST_APPS = (
+    'observer',
+)
 
 
-REFERENCE:
-    http://gremu.net/blog/2010/enable-setuppy-test-your-django-apps/
+def console_main(args=None):
+    parser = optparse.OptionParser(usage="python runtest.py [options] <apps>")
+    parser.add_option('-v', '--verbosity', default='1',
+                      choices=('0', '1', '2', '3'),
+                      help=("Verbosity level; 0=minimal output, 1=normal "
+                            "output, 2=verbose output, 3=very verbose "
+                            "output"))
+    parser.add_option('-i', '--interactive', action='store_true')
+    parser.add_option('-b', '--base-dir', default=None,
+                      help=("The base directory of the code. Used for "
+                            "python 3 compiled codes."))
+    opts, apps = parser.parse_args(args)
 
-AUTHOR:
-    lambdalisue[Ali su ae] (lambdalisue@hashnote.net)
-    
-Copyright:
-    Copyright 2011 Alisue allright reserved.
+    if len(apps) == 0:
+        apps = DEFAULT_TEST_APPS
 
-License:
-    Licensed under the Apache License, Version 2.0 (the "License"); 
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
+    run_tests(apps,
+              verbosity=int(opts.verbosity),
+              interactive=opts.interactive,
+              base_dir=opts.base_dir)
 
-        http://www.apache.org/licenses/LICENSE-2.0
 
-    Unliss required by applicable law or agreed to in writing, software
-    distributed under the License is distrubuted on an "AS IS" BASICS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
-"""
-__AUTHOR__ = "lambdalisue (lambdalisue@hashnote.net)"
-import os, sys
-os.environ['DJANGO_SETTINGS_MODULE'] = 'miniblog.settings'
-test_dir = os.path.join(os.path.dirname(__file__), 'tests', 'src')
-sys.path.insert(0, test_dir)
+def run_tests(app_tests, verbosity=1, interactive=False, base_dir=None):
+    base_dir = base_dir or os.path.dirname(__file__)
+    sys.path.insert(0, os.path.join(base_dir, 'src'))
+    sys.path.insert(0, os.path.join(base_dir, 'tests'))
 
-from django.test.utils import get_runner
-from django.conf import settings
+    os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 
-def runtests(verbosity=1, interactive=True):
-    """Run Django Test"""
+    from django.conf import settings
+    from django.test.utils import get_runner
     TestRunner = get_runner(settings)
-    test_runner = TestRunner(verbosity=verbosity, interactive=interactive)
-    failures = test_runner.run_tests(['blogs'])
+    test_runner = TestRunner(verbosity=verbosity,
+                             interactive=interactive, failfast=False)
+    failures = test_runner.run_tests(app_tests)
     sys.exit(bool(failures))
 
+
 if __name__ == '__main__':
-    runtests()
+    console_main()
 

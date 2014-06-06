@@ -1,0 +1,8 @@
+app_version
+django-appconf
+mock
+django-override-settings
+factory_boy
+django
+sphinx
+sphinxcontrib-napoleon

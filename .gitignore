@@ -1,10 +1,20 @@
-# PyPI
-/build
-/dist
-/*.egg-info
-
-# miniblog
-*.db
-.sass-cache/
-
 .ropeproject
+.project
+*.pyc
+*.egg
+*.egg-info
+.tox
+.coverage
+database.db
+local_settings.py
+/dist
+/sdist
+/tests/*.db
+/tests/static/collection
+/tests/media
+/docs/_build
+/issues
+/build
+.idea
+.python-version
+*.mo
