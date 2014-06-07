@@ -1,0 +1,12 @@
+language: python
+install:
+  - pip install tox
+  - pip install django==1.6
+  - pip install coverage coveralls
+
+script:
+  - tox
+
+after_success:
+  - coverage report
+  - coveralls

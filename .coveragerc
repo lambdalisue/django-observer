@@ -1,0 +1,11 @@
+[report]
+include=
+    src/*.py
+    tests/*.py
+omit=
+    src/observer/__init__.py
+    src/observer/models.py
+    src/observer/tests/compat.py
+exclude_lines=
+    pragma: no cover
+    if __name__ == .__main__.:
