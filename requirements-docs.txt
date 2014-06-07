@@ -1,5 +1,6 @@
 app_version
 django-appconf
+pylru
 mock
 django-override-settings
 factory_boy

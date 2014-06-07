@@ -1,142 +1,125 @@
-from django.test import TestCase
-from django.core.exceptions import ObjectDoesNotExist
-from observer.watchers.base import Watcher
+from django.db import models
+from observer.tests.compat import TestCase
 from observer.tests.compat import MagicMock, patch, DEFAULT
+from observer.watchers.base import WatcherBase
+from observer.tests.models import ObserverTestArticle as Article
 
 
-@patch.multiple('observer.watchers.base', registry=DEFAULT)
-class ObserverWatcherTestCase(TestCase):
+class ObserverWatchersWatcherBaseTestCase(TestCase):
     def setUp(self):
-        self.obj = MagicMock()
-        self.obj.pk = 1
-        self.obj.foo = 'bar'
-        self.attr = 'foo'
+        self.model = Article
+        self.attr = 'title'
         self.callback = MagicMock()
-        with patch.object(Watcher, 'watch'):
-            self.watcher = Watcher(self.obj, self.attr, self.callback)
+        self.watcher = WatcherBase(self.model,
+                                   self.attr,
+                                   self.callback)
 
-    def test_watcher_interface(self, registry):
-        """Watcher should have correct interface"""
-        # properties
-        properties = (
-            'obj', 'attr', 'callback'
-        )
-        for prop in properties:
-            self.assertTrue(hasattr(Watcher, prop))
-
-        # methods
-        methods = (
-            'get_attr_value',
-            'watch',
-            'unwatch',
-            'call',
-            'get_model',
-            'get_object'
-        )
-        for method in methods:
-            self.assertTrue(hasattr(Watcher, method))
-            self.assertTrue(callable(getattr(Watcher, method)))
-
-    def test_watcher_construction_property_assign(self, registry):
-        with patch.object(Watcher, 'watch'):
-            r = Watcher(self.obj, self.attr, self.callback)
-            self.assertEqual(r.obj, self.obj)
-            self.assertEqual(r.attr, self.attr)
-            self.assertEqual(r.callback, self.callback)
-
-    def test_watcher_construction_call_registry_register(self, registry):
-        with patch.object(Watcher, 'watch'):
-            r = Watcher(self.obj, self.attr, self.callback)
-            registry.register.assert_called_with(r)
-
-    def test_watcher_construction_call_watch_method(self, registry):
-        with patch.object(Watcher, 'watch'):
-            Watcher(self.obj, self.attr, self.callback)
-            Watcher.watch.assert_called()
-
-    def test_watcher_construction_does_not_call_watch_method(self, registry):
-        with patch.object(Watcher, 'watch'):
-            Watcher(self.obj, self.attr, self.callback, start_watch=False)
-            self.assertFalse(Watcher.watch.called)
-
-    def test_watcher_construction_raise_exception(self, registry):
-        with patch.object(Watcher, 'watch'):
-            self.obj.pk = None
-            self.assertRaises(AttributeError,
-                              Watcher,
-                              self.obj, self.attr, self.callback)
-
-    def test_watcher_get_attr_value(self, registry):
-        r = self.watcher.get_attr_value()
-        self.assertEqual(r, self.obj.foo)
-
-    def test_watcher_watch_raise_exception(self, registry):
+    def test_watch_raise_exception(self):
+        """watch should raise NotImplementedError"""
         self.assertRaises(NotImplementedError,
                           self.watcher.watch)
 
-    def test_watcher_unwatch_raise_exception(self, registry):
+    def test_unwatch_raise_exception(self):
+        """unwatch should raise NotImplementedError"""
         self.assertRaises(NotImplementedError,
-                          self.watcher.unwatch)
+                          self.watcher.watch)
 
-    def test_watcher_call_call_get_object_method(self, registry):
-        # 'with' with comma separated contexts is introduced from python 2.7.
-        # 'contextlib.nested' is removed from python 3.
-        # Thus the ugly way below is the simplest way to do...
-        with patch.object(Watcher, 'get_object'):
-            with patch.object(Watcher, 'callback'):
-                self.watcher.call()
-                self.watcher.get_object.assert_called()
+    def test_call_call_callback(self):
+        """call should call callback"""
+        obj = MagicMock()
+        self.watcher.call(obj)
+        self.callback.assert_called_once_with(
+            sender=self.watcher, obj=obj, attr=self.attr)
 
-    def test_watcher_call_call_callback(self, registry):
-        # 'with' with comma separated contexts is introduced from python 2.7.
-        # 'contextlib.nested' is removed from python 3.
-        # Thus the ugly way below is the simplest way to do...
-        with patch.object(Watcher, 'get_object'):
-            with patch.object(Watcher, 'callback'):
-                self.watcher.call()
-                self.watcher.callback.assert_called()
+    def test_get_field_return_field(self):
+        """get_field should return field instance"""
+        self.assertTrue(isinstance(self.watcher.get_field(),
+                                   models.CharField))
 
-    def test_watcher_get_model_return_class(self, registry):
-        # comma separated with is introduced from Python 2.7
-        r = self.watcher.get_model()
-        self.assertEqual(r, self.obj.__class__)
+    def test_get_field_return_field_with_attr(self):
+        """get_field should return field instance"""
+        self.assertTrue(isinstance(self.watcher.get_field('author'),
+                                   models.ForeignKey))
 
-    def test_watcher_get_object_return_new_obj(self, registry):
-        new_obj = MagicMock()
-        model = MagicMock()
-        model._default_manager.get = MagicMock(return_value=new_obj)
-        with patch.object(Watcher, 'get_model',
-                          new=MagicMock(return_value=model)):
-            obj = self.watcher.get_object()
-            self.watcher.get_model()._default_manager.get.assert_called_with(
-                pk=self.obj.pk)
-            self.assertNotEqual(obj, self.obj)
-            self.assertEqual(obj, new_obj)
+    def test_construct_with_string_relation(self):
+        field = WatcherBase('observer.ObserverTestArticle',
+                            self.attr, self.callback)
+        self.assertEqual(field.model, Article)
 
-    def test_watcher_get_object_return_cached_obj_when_no_obj_found(self,
-                                                                    registry):
-        new_obj = MagicMock()
-        model = MagicMock()
-        model._default_manager.get = MagicMock(
-            return_value=new_obj,
-            side_effect=ObjectDoesNotExist)
-        with patch.object(Watcher, 'get_model',
-                          new=MagicMock(return_value=model)):
-            obj = self.watcher.get_object()
-            self.watcher.get_model()._default_manager.get.assert_called_with(
-                pk=self.obj.pk)
-            self.assertEqual(obj, self.obj)
-            self.assertNotEqual(obj, new_obj)
+    @patch.multiple('observer.watchers.base',
+                    get_model=DEFAULT, class_prepared=DEFAULT)
+    def test_construct_with_string_relation_lazy_relation(self, get_model,
+                                                          class_prepared):
+        from observer.watchers.base import do_pending_lookups
+        # emulate the situlation that Article has not prepared yet
+        get_model.return_value = None
+        field = WatcherBase('observer.ObserverTestArticle',
+                            self.attr, self.callback)
+        # Article haven't ready yet (get_model return None)
+        self.assertEqual(field.model, 'observer.ObserverTestArticle')
+        # emulate class_prepared signal
+        do_pending_lookups(Article)
+        # Article had ready (class_prepared signal call do_pending_lookups)
+        self.assertEqual(field.model, Article)
 
-    def test_watcher_get_object_raise_exception_when_no_obj_found(self,
-                                                                  registry):
-        new_obj = MagicMock()
-        model = MagicMock()
-        model._default_manager.get = MagicMock(
-            return_value=new_obj,
-            side_effect=ObjectDoesNotExist)
-        with patch.object(Watcher, 'get_model',
-                          new=MagicMock(return_value=model)):
-            self.assertRaises(ObjectDoesNotExist,
-                              self.watcher.get_object,
-                              use_cached=False)
+    def test_lazy_watch_call_watch(self):
+        self.watcher.watch = MagicMock()
+        kwargs = dict(
+            foo=MagicMock(),
+            bar=MagicMock(),
+            hoge=MagicMock(),
+        )
+        self.watcher.lazy_watch(**kwargs)
+        self.watcher.watch.assert_called_once_with(**kwargs)
+
+    @patch.multiple('observer.watchers.base',
+                    get_model=DEFAULT, class_prepared=DEFAULT)
+    def test_lazy_watch_with_unprepared_model(self, get_model,
+                                              class_prepared):
+        from observer.watchers.base import do_pending_lookups
+        # emulate the situlation that Article has not prepared yet
+        get_model.return_value = None
+
+        field = WatcherBase('observer.ObserverTestArticle',
+                            self.attr, self.callback)
+        field.watch = MagicMock()
+        kwargs = dict(
+            foo=MagicMock(),
+            bar=MagicMock(),
+            hoge=MagicMock(),
+        )
+        field.lazy_watch(**kwargs)
+        # the model have not ready yet thus watch should not be called yet
+        self.assertFalse(field.watch.called)
+        # emulate class_prepared signal
+        do_pending_lookups(Article)
+        # Article has ready thus watch should be called automatically
+        field.watch.assert_called_once_with(**kwargs)
+
+    @patch.multiple('observer.watchers.base',
+                    get_model=DEFAULT, class_prepared=DEFAULT)
+    def test_lazy_watch_with_unprepared_relation(self, get_model,
+                                                 class_prepared):
+        from observer.watchers.base import do_pending_lookups
+        from observer.tests.models import User
+        # emulate the situlation that User has not prepared yet
+        get_model.return_value = None
+        self.watcher._attr = 'author'
+        self.watcher.watch = MagicMock()
+        self.watcher.get_field().rel.to = 'observer.ObserverTestUser'
+        kwargs = dict(
+            foo=MagicMock(),
+            bar=MagicMock(),
+            hoge=MagicMock(),
+        )
+        self.watcher.lazy_watch(**kwargs)
+        # the rel.to have not ready yet thus watch should not be called yet
+        self.assertFalse(self.watcher.watch.called)
+        # emulate class_prepared signal
+        #   Note:
+        #   rel.to assignment is proceeded by other function thus it is
+        #   required to do manually, not like model assignment
+        self.watcher.get_field().rel.to = User
+        do_pending_lookups(User)
+        # User has ready thus watch should be called automatically
+        self.watcher.watch.assert_called_once_with(**kwargs)

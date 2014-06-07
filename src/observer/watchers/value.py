@@ -1,48 +1,51 @@
-from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.signals import pre_save
 from django.db.models.signals import post_save
-from observer.watchers.base import Watcher
+from observer.investigator import Investigator
+from observer.utils.signals import (register_reciever,
+                                    unregister_reciever)
+from base import WatcherBase
 
 
-class ValueWatcher(Watcher):
-    """Watcher class for wathching value attribute"""
-    def watch(self):
-        model = self.get_model()
-        # Add recivers
-        pre_save.connect(self._pre_save_reciver, sender=model, weak=False)
-        post_save.connect(self._post_save_reciver, sender=model, weak=False)
-        # Initialize variable
-        self._previous_value = None
+class ValueWatcher(WatcherBase):
+    """
+    Watcher field for watching non relational field such as CharField.
+    """
+    def __init__(self, model, attr, callback, call_on_created=True):
+        super(ValueWatcher, self).__init__(model, attr, callback)
+        self._call_on_created = call_on_created
+
+    def watch(self, call_on_created=None):
+        self._call_on_created = (self._call_on_created
+                                 if call_on_created is None
+                                 else call_on_created)
+        # initialize investigator
+        self._investigator = Investigator(self.model, include=[self.attr])
+        # register the receivers
+        register_reciever(self.model, pre_save,
+                          self._pre_save_receiver)
+        register_reciever(self.model, post_save,
+                          self._post_save_receiver)
 
     def unwatch(self):
-        model = self.get_model()
-        pre_save.disconnect(self._pre_save_reciver, sender=model)
-        post_save.disconnect(self._post_save_reciver, sender=model)
+        unregister_reciever(self.model, pre_save,
+                            self._pre_save_receiver)
+        unregister_reciever(self.model, post_save,
+                            self._post_save_receiver)
 
-    def _pre_save_reciver(self, sender, instance, **kwargs):
-        # validate with the instance pk
-        if not self._validate_signal_instance(instance):
+    def _pre_save_receiver(self, sender, instance, **kwargs):
+        if kwargs.get('row', False):
+            # should not call any callback while it is called via fixtures or
+            # so on
             return
-        # use a value of obj in database (unsaved) or specify
-        # ObjectDoesNotExist to tell the post_reciver that the object could not
-        # found.
-        try:
-            unsaved_obj = self.get_object(use_cached=False)
-            self._previous_value = self.get_attr_value(unsaved_obj)
-        except ObjectDoesNotExist:
-            # `None` cannot be used in this caes because the attribute
-            # possibly assigned as `None`. Probaly nobody would assign the
-            # attribute as `ObjectDoesNotExist` thus I use it in this case.
-            self._previous_value = ObjectDoesNotExist
+        self._investigator.prepare(instance)
 
-    def _post_save_reciver(self, sender, instance, **kwargs):
-        # validate with the instance pk
-        if not self._validate_signal_instance(instance):
+    def _post_save_receiver(self, sender, instance, created, **kwargs):
+        if kwargs.get('row', False):
+            # should not call any callback while it is called via fixtures or
+            # so on
             return
-        # if pre reciever could not found the object, ignore
-        if self._previous_value is ObjectDoesNotExist:
-            return
-        # compare the value with previous value and call when the value is
-        # changed
-        if self._previous_value != self.get_attr_value(instance):
-            self.call()
+        if self._call_on_created and created:
+            self.call(instance)
+        # if investigator yield any field_name, call the callback
+        if any(self._investigator.investigate(instance)):
+            self.call(instance)

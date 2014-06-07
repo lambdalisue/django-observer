@@ -1,55 +1,107 @@
-Watch modification of any type of field in Django's model and call registered callback function
+django-observer
+==========================
+.. image:: https://secure.travis-ci.org/lambdalisue/django-observer.png?branch=master
+    :target: http://travis-ci.org/lambdalisue/django-observer
+    :alt: Build status
 
-This observer can watch
+.. image:: https://coveralls.io/repos/lambdalisue/django-observer/badge.png?branch=master
+    :target: https://coveralls.io/r/lambdalisue/django-observer/
+    :alt: Coverage
 
--   Any value type of field (CharField, IntegerField ...)
--   Any Model type of field (ForeignKey, OneToOneField, GenericForeignKey)
--   Any RelatedManager type of field (field automatically created via ``related_name`` of ForeignKey)
--   Any ManyRelatedManager type of field (ManyToManyField)
--   Any GenericRelatedObjectManager type of field (GenericRelation)
--   Any Model instance
+.. image:: https://pypip.in/d/django-observer/badge.png
+    :target: https://pypi.python.org/pypi/django-observer/
+    :alt: Downloads
+
+.. image:: https://pypip.in/v/django-observer/badge.png
+    :target: https://pypi.python.org/pypi/django-observer/
+    :alt: Latest version
+
+.. image:: https://pypip.in/wheel/django-observer/badge.png
+    :target: https://pypi.python.org/pypi/django-observer/
+    :alt: Wheel Status
+
+.. image:: https://pypip.in/egg/django-observer/badge.png
+    :target: https://pypi.python.org/pypi/django-observer/
+    :alt: Egg Status
+
+.. image:: https://pypip.in/license/django-observer/badge.png
+    :target: https://pypi.python.org/pypi/django-observer/
+    :alt: License
+
+Author
+    Alisue <lambdalisue@hashnote.net>
+Supported python versions
+    Python 2.6, 2.7, 3.2, 3.3
+Supported django versions
+    Django 1.2 - 1.6
+
+Observe django model attribute modifications and call the specified callback.
+django-observer can recognize the modifications of
+
+-   Any value type of fields (CharField, IntegerField, etc.)
+-   Any relational fields (ForeignKey, OneToOneField, ManyToManyField)
+-   Any reverse relational fields (fields given by `related_name`)
+-   Any generic relational fields (GenericForeignKey, GenericRelation)
 
 
-Install
-==============
-This library is on PyPI so you can install it with::
+Documentation
+-------------
+http://django-observer.readthedocs.org/en/latest/
 
-    pip install django-observer
+Installation
+------------
+Use pip_ like::
 
-or from github::
-    
-    pip install git+https://github.com/lambdalisue/django-observer.git
+    $ pip install django-observer
 
+.. _pip:  https://pypi.python.org/pypi/pip
 
 Usage
-==========
+-----
 
->>> from django.db import models
->>> from observer import watch
->>> 
->>> class Entry(models.Model):
-...     status = models.CharFiled('status', max_length=10)
-...     body = models.CharField('title', max_length=100)
-... 
-...     def save(self, *args, **kwargs):
-...         super(Entry, self).save(*args, **kwargs)
-... 
-...         # Watch callback, this is automatically called if `status` is **changed**
-...         def watch_callback(sender, obj, attr):
-...             # sender is a watcher instance
-...             # obj is a instance of target
-...             # attr is a name of target field
-...             if obj.status == 'draft':
-...                 obj.title = "draft - %s" % obj.body
-...             else:
-...                 obj.title = "publish - %s" % obj.body
-...         # Start watching
-...         self._watcher = watch(self, 'status', watch_callback)
+Configuration
+~~~~~~~~~~~~~
+1.  Add ``observer`` to the ``INSTALLED_APPS`` in your settings
+    module
 
-See `observer_test/src/miniblog/blog/tests/test_observer.py <https://github.com/lambdalisue/django-observer/blob/master/observer_test/src/miniblog/blog/tests/test_observer.py>`_ for more detail.
+    .. code:: python
 
-Settings
-================
+        INSTALLED_APPS = (
+            # ...
+            'observer',
+        )
 
-OBSERVER_DEFAULT_WATCHER
-    A class of watcher. Default is 'observer.watcher.complex.ComplexWatcher'
+Example
+~~~~~~~~~~~
+
+.. code:: python
+
+    from django.db import models
+    from django.contrib.auth.models import User
+
+    def status_changed(sender, obj, attr):
+        if obj.status == 'draft':
+            obj.title = "Draft %s" % obj.title
+        else:
+            obj.title = obj.title.replace("Draft ")
+        obj.save()
+    
+    # watch status attribute via decorator
+    from observer.decorators import watch
+    @watch('status', status_changed, call_on_created=True)
+    class Entry(models.Model):
+        title = models.CharField(max_length=30)
+        status = models.CharFiled(max_length=10)
+
+        body = models.TextField('title', max_length=100)
+        author = models.ForeignKey(User, null=True, blank=True)
+
+
+    def author_changed(sender, obj, attr):
+        if obj.author is None:
+            obj.status = "draft"
+            obj.save()
+
+    # watch author attribute via function
+    from observer.shortcuts import watch
+    watch(Entry, 'author', author_changed)

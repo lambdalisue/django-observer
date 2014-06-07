@@ -9,3 +9,5 @@ from appconf import AppConf
 
 class ObserverAppConf(AppConf):
     DEFAULT_WATCHER = 'observer.watchers.ComplexWatcher'
+
+    LRU_CACHE_SIZE = 128
