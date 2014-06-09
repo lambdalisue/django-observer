@@ -97,4 +97,5 @@ INSTALLED_APPS = (
     # Uncomment the next line to enable the admin:
     'django.contrib.admin',
     'observer',
+    'observer.tests',
 )

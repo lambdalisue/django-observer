@@ -1,84 +1,56 @@
-# coding=utf-8
-"""
-"""
-__author__ = 'Alisue <lambdalisue@hashnote.net>'
-from django.db.models import ForeignKey
 from django.db.models.fields import FieldDoesNotExist
-from django.core.exceptions import ObjectDoesNotExist
 
 
-def get_latest_obj(obj, ignore_exception=True):
+def get_field(model, attr, ignore_exception=True):
     """
-    Get latest object from database
+    Get a Field instance of 'attr' in the model
 
-    It return None when no object is found or raise ObjectDoesNotExist
-    when ignore_exception is False
-    """
-    default_manager = obj.__class__._default_manager
-    try:
-        return default_manager.get(pk=obj.pk)
-    except ObjectDoesNotExist:
-        if ignore_exception:
-            return None
-        raise
+    This function is required while django builtin `meta.get_field(name)` does
+    not refer reverse relations, many to many relations, and vritual
+    fields.
 
-
-def iterate_related_attr_names(model):
-    """
-    Iterate over the foreign key attribute of model to find the related
-    attribute names.
-
-    This function yield a tuple of accessor name (attribute name of the model)
-    and related attribute name
+    Notice that this function iterate all fields to find the corresponding
+    field instance. This may cause a performance issue thus you should use
+    your own cache system to store the found instance.
+    If you are using Python 3.2 or above, you might interested in
+    a `functools.lru_cache` or `pylru.lrudecorator` to memoizing the result
 
     Args:
-        model (class): A django model class
-
-    Yields:
-        tuple: (accessor_name, related_attr_name)
-    """
-    for field in model._meta.fields:
-        if not isinstance(field, ForeignKey):
-            continue
-        accessor_name = field.related.get_accessor_name()
-        yield accessor_name, field.name
-
-
-def find_related_attr_name(model, attr):
-    """
-    Find corresponding related attribute name of specified attribute.
-
-    This function return a corresponding related attribute name of specified
-    attribute of the model.
-    It will raise KeyError when no attribute is found.
-
-    Args:
-        model (class): A django model class
-        attr (str): An attribute name (accessor name)
-
-    Returns:
-        str: A corresponding related attribute name
+        model (model): A model or model instance
+        attr (name): A name of the attribute interest
+        ignore_exception (bool): return None when no corresponding field is
+            found if this is True, otherwise raise FieldDoesNotExist
 
     Raises:
-        KeyError: When the specified attribute is not found as ForeignKey
-            in model
-    """
-    for accessor_name, related_attr_name in iterate_related_attr_names(model):
-        if accessor_name == attr:
-            return related_attr_name
-    raise KeyError("%s does not have '%s' attribute" % (model, attr))
+        FieldDoesNotExist: raised when no corresponding field is found and
+        `ignore_exception` is False.
 
-
-def get_field(obj, attr, ignore_exception=True):
+    Returns:
+        None or an instance of Field.
     """
-    Get attribute field object of the obj
-    It return None if the field is not exists or raise FieldDoesNotExist when
-    ignore_exception is False
-    """
-    meta = obj._meta
+    meta = model._meta
+    # try to find with get_field
     try:
-        return meta.get_field_by_name(attr)[0]
+        return meta.get_field(attr)
     except FieldDoesNotExist:
-        if ignore_exception:
-            return None
-        raise
+        # reverse relations and virtual fields could not be found
+        # with `get_field` thus just ignore it.
+        pass
+    # from reverse relations of ForeignKey/OneToOneField
+    for robj in meta.get_all_related_objects():
+        if attr == robj.get_accessor_name():
+            # notice that the field belongs to related object
+            return robj.field
+    # from reverse relations of ManyToMany
+    for robj in meta.get_all_related_many_to_many_objects():
+        if attr == robj.get_accessor_name():
+            # notice that the field belongs to related object
+            return robj.field
+    # from virtual fields
+    for field in meta.virtual_fields:
+        if field.name == attr:
+            return field
+    # could not be found
+    if ignore_exception:
+        return None
+    raise FieldDoesNotExist

@@ -25,6 +25,11 @@ if __name__ == '__main__':
         from django.core.management import execute_from_command_line
         execute_from_command_line(sys.argv)
     except ImportError:
+        # check django version
+        import django
+        if django.VERSION[:2] >= (1.4):
+            # there are real problems on importing
+            raise
         from django.core.management import execute_manager
         settings = __import__(os.environ['DJANGO_SETTINGS_MODULE'])
         execute_manager(settings)
