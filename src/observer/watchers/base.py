@@ -1,45 +1,7 @@
-from django.db.models.loading import get_model
-from django.db.models.signals import class_prepared
 from observer.conf import settings
 from observer.compat import lru_cache
 from observer.utils.models import get_field
-
-
-# ============================================================================
-# COPIED AND MODIFIED FROM DJANGO 1.2.2
-
-pending_lookups = {}
-
-
-def add_lazy_relation(field, relation, operation):
-    # Look for an "app.Model" relation
-    try:
-        app_label, model_name = relation.split(".")
-    except AttributeError:
-        # If it doesn't have a split it's actually a model class
-        app_label = relation._meta.app_label
-        model_name = relation._meta.object_name
-
-    # Try to look up the related model, and if it's already loaded resolve the
-    # string right away. If get_model returns None, it means that the related
-    # model isn't loaded yet, so we need to pend the relation until the class
-    # is prepared.
-    model = get_model(app_label, model_name, False)
-    if model:
-        operation(field, model)
-    else:
-        key = (app_label, model_name)
-        value = (field, operation)
-        pending_lookups.setdefault(key, []).append(value)
-
-
-def do_pending_lookups(sender, **kwargs):
-    key = (sender._meta.app_label, sender.__name__)
-    for field, operation in pending_lookups.pop(key, []):
-        operation(field, sender)
-
-class_prepared.connect(do_pending_lookups)
-# ============================================================================
+from observer.utils.models import resolve_relation_lazy
 
 
 def is_relation_ready(relation):
@@ -71,9 +33,9 @@ class WatcherBase(object):
 
         # resolve string model specification
         if not is_relation_ready(model):
-            def resolve_related_class(self, model):
+            def resolve_related_class(model, self):
                 self._model = model
-            add_lazy_relation(self, model, resolve_related_class)
+            resolve_relation_lazy(model, resolve_related_class, self=self)
 
     @property
     def model(self):
@@ -91,17 +53,19 @@ class WatcherBase(object):
         """
         Call watch safely. It wait until everything get ready.
         """
-        def recall_lazy_watch(field, sender):
-            field.lazy_watch(**kwargs)
+        def recall_lazy_watch(sender, self, **kwargs):
+            self.lazy_watch(**kwargs)
         # check if the model is ready
         if not is_relation_ready(self.model):
-            add_lazy_relation(self, self.model, recall_lazy_watch)
+            resolve_relation_lazy(self.model, recall_lazy_watch,
+                                  self=self, **kwargs)
             return
 
         # check if the related models is ready
-        rel = self.get_field().rel
-        if rel and not is_relation_ready(rel.to):
-            add_lazy_relation(self, rel.to, recall_lazy_watch)
+        field = self.get_field()
+        if field.rel and not is_relation_ready(field.rel.to):
+            resolve_relation_lazy(field.rel.to, recall_lazy_watch,
+                                  self=self, **kwargs)
             return
 
         # ready to watch

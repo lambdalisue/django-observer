@@ -46,11 +46,11 @@ class ObserverWatchersWatcherBaseTestCase(TestCase):
                             self.attr, self.callback)
         self.assertEqual(field.model, Article)
 
-    @patch.multiple('observer.watchers.base',
+    @patch.multiple('observer.utils.models',
                     get_model=DEFAULT, class_prepared=DEFAULT)
     def test_construct_with_string_relation_lazy_relation(self, get_model,
                                                           class_prepared):
-        from observer.watchers.base import do_pending_lookups
+        from observer.utils.models import _do_pending_lookups
         # emulate the situlation that Article has not prepared yet
         get_model.return_value = None
         field = WatcherBase('observer.ObserverTestArticle',
@@ -58,7 +58,7 @@ class ObserverWatchersWatcherBaseTestCase(TestCase):
         # Article haven't ready yet (get_model return None)
         self.assertEqual(field.model, 'observer.ObserverTestArticle')
         # emulate class_prepared signal
-        do_pending_lookups(Article)
+        _do_pending_lookups(Article)
         # Article had ready (class_prepared signal call do_pending_lookups)
         self.assertEqual(field.model, Article)
 
@@ -72,11 +72,11 @@ class ObserverWatchersWatcherBaseTestCase(TestCase):
         self.watcher.lazy_watch(**kwargs)
         self.watcher.watch.assert_called_once_with(**kwargs)
 
-    @patch.multiple('observer.watchers.base',
+    @patch.multiple('observer.utils.models',
                     get_model=DEFAULT, class_prepared=DEFAULT)
     def test_lazy_watch_with_unprepared_model(self, get_model,
                                               class_prepared):
-        from observer.watchers.base import do_pending_lookups
+        from observer.utils.models import _do_pending_lookups
         # emulate the situlation that Article has not prepared yet
         get_model.return_value = None
 
@@ -92,15 +92,15 @@ class ObserverWatchersWatcherBaseTestCase(TestCase):
         # the model have not ready yet thus watch should not be called yet
         self.assertFalse(field.watch.called)
         # emulate class_prepared signal
-        do_pending_lookups(Article)
+        _do_pending_lookups(Article)
         # Article has ready thus watch should be called automatically
         field.watch.assert_called_once_with(**kwargs)
 
-    @patch.multiple('observer.watchers.base',
+    @patch.multiple('observer.utils.models',
                     get_model=DEFAULT, class_prepared=DEFAULT)
     def test_lazy_watch_with_unprepared_relation(self, get_model,
                                                  class_prepared):
-        from observer.watchers.base import do_pending_lookups
+        from observer.utils.models import _do_pending_lookups
         from observer.tests.models import User
         # emulate the situlation that User has not prepared yet
         get_model.return_value = None
@@ -120,6 +120,6 @@ class ObserverWatchersWatcherBaseTestCase(TestCase):
         #   rel.to assignment is proceeded by other function thus it is
         #   required to do manually, not like model assignment
         self.watcher.get_field().rel.to = User
-        do_pending_lookups(User)
+        _do_pending_lookups(User)
         # User has ready thus watch should be called automatically
         self.watcher.watch.assert_called_once_with(**kwargs)

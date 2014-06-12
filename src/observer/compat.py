@@ -8,5 +8,12 @@ except ImportError:
 try:
     from functools import lru_cahce
 except ImportError:
-    # use pylru instead
-    from pylru import lrudecorator as lru_cache
+    try:
+        # use pylru instead
+        from pylru import lrudecorator as lru_cache
+    except ImportError:
+        # use pylru is not installed
+        def lru_cache(maxsize):
+            def inner(fn):
+                return fn
+            return inner

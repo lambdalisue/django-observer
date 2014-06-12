@@ -1,3 +1,4 @@
+from django.db.models.loading import get_model
 from django.db.models.fields import FieldDoesNotExist
 
 
@@ -54,3 +55,63 @@ def get_field(model, attr, ignore_exception=True):
     if ignore_exception:
         return None
     raise FieldDoesNotExist
+
+
+def get_relation(relation):
+    """
+    Resolve relation
+
+    This function resolve a relation indicated as a string (e.g.
+    'app_name.Model'). The 'relation' can be a model class for convinience.
+    It return ``None`` when the relation could not be resolved. It is happend
+    when the related class is not loaded yet.
+
+    Args:
+        relation (str or class): A model indicated as a string or class
+
+    Returns:
+        (None or a class, app_label, model_name)
+    """
+    # Try to split the relation
+    try:
+        app_label, model_name = relation.split('.', 1)
+    except AttributeError:
+        app_label = relation._meta.app_label
+        model_name = relation._meta.model_name
+    model = get_model(app_label, model_name, False)
+    return model, app_label, model_name
+
+
+_pending_lookups = {}
+
+
+def resolve_relation_lazy(relation, operation, **kwargs):
+    """
+    Resolve relation and call the operation with the specified kwargs.
+
+    The operation will be called when the relation is ready to resolved.
+    The original idea was copied from Django 1.2.2 source code thus the
+    license belongs to the Django's license (BSD License)
+
+    Args:
+        relation (str or class): A relation which you want to resolve
+        operation (fn): A callback function which will called with resolved
+            relation (class) and the specified kwargs.
+    """
+    model, app_label, model_name = get_relation(relation)
+    if model:
+        operation(model, **kwargs)
+    else:
+        key = (app_label, model_name)
+        value = (operation, kwargs)
+        _pending_lookups.setdefault(key, []).append(value)
+
+
+def _do_pending_lookups(sender, **kwargs):
+    key = (sender._meta.app_label, sender.__name__)
+    for operation, kwargs in _pending_lookups.pop(key, []):
+        operation(sender, **kwargs)
+
+
+from django.db.models.signals import class_prepared
+class_prepared.connect(_do_pending_lookups)

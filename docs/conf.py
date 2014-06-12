@@ -19,6 +19,9 @@ import os
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #sys.path.insert(0, os.path.abspath('.'))
+BASE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(BASE)
+sys.path.insert(0, os.path.join(ROOT, 'src'))
 
 # -- General configuration ------------------------------------------------
 
@@ -30,6 +33,7 @@ import os
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinxcontrib.napoleon',
     'sphinx.ext.viewcode',
 ]
 
@@ -46,15 +50,16 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'src'
-copyright = u'2014, Author'
+project = u'django-observer'
+copyright = u'2014, Alisue'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
+import observer
 # The short X.Y version.
-version = ''
+version = observer.__version__
 # The full version, including alpha/beta/rc tags.
 release = ''
 
@@ -179,7 +184,7 @@ html_static_path = ['_static']
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'srcdoc'
+htmlhelp_basename = 'djangoobserverdoc'
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -199,8 +204,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  ('index', 'src.tex', u'src Documentation',
-   u'Author', 'manual'),
+  ('index', 'django-observer.tex', u'django-observer Documentation',
+   u'Alisue', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -229,8 +234,8 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'src', u'src Documentation',
-     [u'Author'], 1)
+    ('index', 'django-observer', u'django-observer Documentation',
+     [u'Alisue'], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -243,8 +248,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'src', u'src Documentation',
-   u'Author', 'src', 'One line description of project.',
+  ('index', 'django-observer', u'django-observer Documentation',
+   u'Alisue', 'django-observer', 'One line description of project.',
    'Miscellaneous'),
 ]
 
@@ -264,10 +269,10 @@ texinfo_documents = [
 # -- Options for Epub output ----------------------------------------------
 
 # Bibliographic Dublin Core info.
-epub_title = u'src'
-epub_author = u'Author'
-epub_publisher = u'Author'
-epub_copyright = u'2014, Author'
+epub_title = u'django-observer'
+epub_author = u'Alisue'
+epub_publisher = u'Alisue'
+epub_copyright = u'2014, Alisue'
 
 # The basename for the epub file. It defaults to the project name.
 #epub_basename = u'src'
@@ -329,3 +334,13 @@ epub_exclude_files = ['search.html']
 
 # If false, no index is generated.
 #epub_use_index = True
+
+# on_rtd is whether we are on readthedocs.org
+on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
+
+if not on_rtd:  # only import and set the theme if we're building docs locally
+    import sphinx_rtd_theme
+    html_theme = 'sphinx_rtd_theme'
+    html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+
+# otherwise, readthedocs.org uses their theme by default, so no need to specify it
