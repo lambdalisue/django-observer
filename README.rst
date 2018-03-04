@@ -8,15 +8,15 @@ django-observer
     :target: https://coveralls.io/r/lambdalisue/django-observer/
     :alt: Coverage
 
-.. image:: https://pypip.in/d/django-observer/badge.png
+.. image:: https://img.shields.io/pypi/dm/django-observer.svg
     :target: https://pypi.python.org/pypi/django-observer/
     :alt: Downloads
 
-.. image:: https://pypip.in/v/django-observer/badge.png
+.. image:: https://img.shields.io/pypi/v/django-observer.svg
     :target: https://pypi.python.org/pypi/django-observer/
     :alt: Latest version
 
-.. image:: https://pypip.in/wheel/django-observer/badge.png
+.. image:: https://img.shields.io/pypi/wheel/django-observer.svg
     :target: https://pypi.python.org/pypi/django-observer/
     :alt: Wheel Status
 
@@ -24,7 +24,7 @@ django-observer
     :target: https://pypi.python.org/pypi/django-observer/
     :alt: Egg Status
 
-.. image:: https://pypip.in/license/django-observer/badge.png
+.. image:: https://img.shields.io/pypi/l/django-observer.svg
     :target: https://pypi.python.org/pypi/django-observer/
     :alt: License
 
